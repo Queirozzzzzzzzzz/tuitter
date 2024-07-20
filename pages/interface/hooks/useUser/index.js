@@ -9,6 +9,7 @@ import {
 
 const userEndpoint = "/api/v1/user";
 const sessionEndpoint = "/api/v1/sessions";
+const authPaths = ["login", "signup"];
 
 const UserContext = createContext({
   user: null,
@@ -80,11 +81,7 @@ export function UserProvider({ children }) {
   }, [fetchUser, isLoading]);
 
   useEffect(() => {
-    if (
-      !user?.id ||
-      (router?.pathname !== "/login" && router?.pathname !== "/signup")
-    )
-      return;
+    if (!user?.id || authPaths.includes(router?.pathname)) return;
 
     if (
       router.query?.redirect?.startsWith("/") &&
