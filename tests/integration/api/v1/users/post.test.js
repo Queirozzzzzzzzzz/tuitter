@@ -10,6 +10,14 @@ beforeAll(async () => {
   await orchestrator.runPendingMigrations();
 });
 
+const defaultUserFeatures = [
+  "read:session",
+  "create:session",
+  "read:user",
+  "read:user:self",
+  "update:user",
+];
+
 describe("POST /api/v1/users", () => {
   describe("Anonymous user", () => {
     test("With unique and valid data", async () => {
@@ -39,15 +47,11 @@ describe("POST /api/v1/users", () => {
       expect(uuidVersion(resBody.id)).toEqual(4);
       expect(resBody.tag).toEqual(values.tag);
       expect(resBody.username).toEqual(values.username);
-      expect(resBody.features).toEqual([
-        "read:session",
-        "create:session",
-        "read:user",
-      ]);
+      expect(resBody.features).toEqual(defaultUserFeatures);
       expect(Date.parse(resBody.created_at)).not.toEqual(NaN);
       expect(Date.parse(resBody.updated_at)).not.toEqual(NaN);
 
-      const userInDatabase = await user.findByUsername(values.username);
+      const userInDatabase = await user.findByTag(values.tag);
       const validPasswordsMatch = await password.compare(
         values.password,
         userInDatabase.password,
@@ -91,15 +95,11 @@ describe("POST /api/v1/users", () => {
       expect(uuidVersion(resBody.id)).toEqual(4);
       expect(resBody.tag).toEqual(values.tag);
       expect(resBody.username).toEqual(values.username);
-      expect(resBody.features).toEqual([
-        "read:session",
-        "create:session",
-        "read:user",
-      ]);
+      expect(resBody.features).toEqual(defaultUserFeatures);
       expect(Date.parse(resBody.created_at)).not.toEqual(NaN);
       expect(Date.parse(resBody.updated_at)).not.toEqual(NaN);
 
-      const userInDatabase = await user.findByUsername(values.username);
+      const userInDatabase = await user.findByTag(values.tag);
       const validPasswordsMatch = await password.compare(
         values.password,
         userInDatabase.password,
@@ -134,15 +134,11 @@ describe("POST /api/v1/users", () => {
       expect(uuidVersion(resBody.id)).toEqual(4);
       expect(resBody.tag).toEqual("untrimmedvaluestag");
       expect(resBody.username).toEqual("extraSpaceInTheEnd");
-      expect(resBody.features).toEqual([
-        "read:session",
-        "create:session",
-        "read:user",
-      ]);
+      expect(resBody.features).toEqual(defaultUserFeatures);
       expect(Date.parse(resBody.created_at)).not.toEqual(NaN);
       expect(Date.parse(resBody.updated_at)).not.toEqual(NaN);
 
-      const userInDatabase = await user.findByUsername("extraSpaceInTheEnd");
+      const userInDatabase = await user.findByTag("untrimmedvaluestag");
       const validPasswordsMatch = await password.compare(
         "extraspaceintheendpassword",
         userInDatabase.password,

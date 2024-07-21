@@ -1,7 +1,7 @@
 import db from "infra/database";
 import validator from "models/validator";
 import authentication from "models/authentication";
-import { ValidationError } from "errors";
+import { ValidationError, NotFoundError } from "errors";
 
 function validatePostSchema(postedUserData) {
   const cleanValues = validator(postedUserData, {
@@ -9,6 +9,8 @@ function validatePostSchema(postedUserData) {
     username: "required",
     email: "required",
     password: "required",
+    description: "optional",
+    picture: "optional",
   });
 
   return cleanValues;
@@ -21,10 +23,23 @@ async function create(rawData) {
   await validateUniqueEmail(validData.email);
   await hashPasswordInObject(validData);
 
-  validData.features = ["read:session", "create:session", "read:user"];
+  validData.features = [
+    "read:session",
+    "create:session",
+    "read:user",
+    "read:user:self",
+    "update:user",
+  ];
 
   const query = {
-    text: `INSERT INTO users (tag, username, email, password, features) VALUES ($1, $2, $3, $4, $5) RETURNING *;`,
+    text: `
+    INSERT INTO 
+      users (tag, username, email, password, features) 
+    VALUES 
+      ($1, $2, $3, $4, $5) 
+    RETURNING 
+      *
+    ;`,
     values: [
       validData.tag,
       validData.username,
@@ -48,7 +63,14 @@ function createAnonymous() {
 
 async function validateUniqueTag(tag, options) {
   const query = {
-    text: "SELECT tag FROM users WHERE LOWER(tag) = LOWER($1)",
+    text: `
+    SELECT 
+      tag 
+    FROM 
+      users 
+    WHERE 
+      LOWER(tag) = LOWER($1)
+    ;`,
     values: [tag],
   };
 
@@ -64,13 +86,20 @@ async function validateUniqueTag(tag, options) {
   }
 }
 
-async function validateUniqueUsername(username) {
+async function validateUniqueUsername(username, options) {
   const query = {
-    text: "SELECT username FROM users WHERE LOWER(username) = LOWER($1)",
+    text: `
+    SELECT 
+      username 
+    FROM 
+      users 
+    WHERE 
+      LOWER(username) = LOWER($1)
+    ;`,
     values: [username],
   };
 
-  const results = await db.query(query);
+  const results = await db.query(query, options);
 
   if (results.rowCount > 0) {
     throw new ValidationError({
@@ -82,13 +111,20 @@ async function validateUniqueUsername(username) {
   }
 }
 
-async function validateUniqueEmail(email) {
+async function validateUniqueEmail(email, options) {
   const query = {
-    text: "SELECT email FROM users WHERE LOWER(email) = LOWER($1)",
+    text: `
+    SELECT 
+      email 
+    FROM 
+      users 
+    WHERE 
+      LOWER(email) = LOWER($1)
+    ;`,
     values: [email],
   };
 
-  const results = await db.query(query);
+  const results = await db.query(query, options);
 
   if (results.rowCount > 0) {
     throw new ValidationError({
@@ -100,14 +136,21 @@ async function validateUniqueEmail(email) {
   }
 }
 
-async function hashPasswordInObject(userObj) {
-  userObj.password = await authentication.hashPassword(userObj.password);
-  return userObj;
+async function hashPasswordInObject(obj) {
+  obj.password = await authentication.hashPassword(obj.password);
+  return obj;
 }
 
 async function findById(id) {
   const query = {
-    text: `SELECT * FROM users WHERE id = $1;`,
+    text: `
+    SELECT 
+      *
+    FROM 
+      users 
+    WHERE 
+      id = $1
+    ;`,
     values: [id],
   };
 
@@ -118,7 +161,7 @@ async function findById(id) {
       message: `O id "${userId}" não foi encontrado no sistema.`,
       action: 'Verifique se o "id" está digitado corretamente.',
       stack: new Error().stack,
-      errorLocationCode: "MODEL:USER:FIND_ONE_BY_ID:NOT_FOUND",
+      errorLocationCode: "MODEL:USER:FIND_BY_ID:NOT_FOUND",
       key: "id",
     });
   }
@@ -128,7 +171,16 @@ async function findById(id) {
 
 async function findByEmail(email) {
   const query = {
-    text: `SELECT * FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1;`,
+    text: `
+    SELECT 
+      * 
+    FROM 
+      users 
+    WHERE 
+      LOWER(email) = LOWER($1) 
+    LIMIT 
+      1
+    ;`,
     values: [email],
   };
 
@@ -139,7 +191,7 @@ async function findByEmail(email) {
       message: `O email informado não foi encontrado no sistema.`,
       action: 'Verifique se o "email" está digitado corretamente.',
       stack: new Error().stack,
-      errorLocationCode: "MODEL:USER:FIND_ONE_BY_EMAIL:NOT_FOUND",
+      errorLocationCode: "MODEL:USER:FIND_BY_EMAIL:NOT_FOUND",
       key: "email",
     });
   }
@@ -147,21 +199,30 @@ async function findByEmail(email) {
   return results.rows[0];
 }
 
-async function findByUsername(username) {
+async function findByTag(tag, options = {}) {
   const query = {
-    text: `SELECT * FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1;`,
-    values: [username],
+    text: `
+    SELECT 
+      * 
+    FROM 
+      users 
+    WHERE 
+      LOWER(tag) = LOWER($1) 
+    LIMIT 
+      1
+    ;`,
+    values: [tag],
   };
 
-  const results = await db.query(query);
+  const results = await db.query(query, options);
 
   if (results.rowCount === 0) {
     throw new NotFoundError({
       message: `O usuário informado não foi encontrado no sistema.`,
-      action: 'Verifique se o "usuário" está digitado corretamente.',
+      action: 'Verifique se o "username" está digitado corretamente.',
       stack: new Error().stack,
-      errorLocationCode: "MODEL:USER:FIND_ONE_BY_EMAIL:NOT_FOUND",
-      key: "email",
+      errorLocationCode: "MODEL:USER:FIND_BY_TAG:NOT_FOUND",
+      key: "tag",
     });
   }
 
@@ -174,7 +235,17 @@ async function removeFeatures(id, features) {
   if (features?.length > 0) {
     for (const feature of features) {
       const query = {
-        text: `UPDATE users SET features = array_remove(features, $1), updated_at = (now() at time zone 'utc') WHERE id = $2 RETURNING *;`,
+        text: `
+        UPDATE 
+          users 
+        SET 
+          features = array_remove(features, $1), 
+          updated_at = (now() at time zone 'utc') 
+        WHERE 
+          id = $2 
+        RETURNING 
+          *
+        ;`,
         values: [feature, id],
       };
 
@@ -183,7 +254,17 @@ async function removeFeatures(id, features) {
     }
   } else {
     const query = {
-      text: `UPDATE users SET features = '{}', updated_at = (now() at time zone 'utc') WHERE id = $1 RETURNING *;`,
+      text: `
+      UPDATE 
+        users 
+      SET 
+        features = '{}', 
+        updated_at = (now() at time zone 'utc') 
+      WHERE 
+        id = $1 
+      RETURNING 
+        *
+      ;`,
       values: [id],
     };
 
@@ -194,11 +275,111 @@ async function removeFeatures(id, features) {
   return lastUpdated;
 }
 
+async function addFeatures(id, features, options) {
+  const query = {
+    text: `
+    UPDATE 
+      users 
+    SET 
+      features = array_cat(features, $2), 
+      updated_at = (now() at time zone 'utc') 
+    WHERE 
+      id = $1 
+    RETURNING 
+      *
+    ;`,
+    values: [id, features],
+  };
+
+  const results = await db.query(query, options);
+
+  return results.rows[0];
+}
+
+async function update(tag, data, options = {}) {
+  const validData = await validatePatchSchema(data);
+  const oldUser = await findByTag(tag, {
+    transaction: options.transaction,
+  });
+
+  if (
+    "username" in validData &&
+    oldUser.username.toLowerCase() !== validData.username.toLowerCase()
+  ) {
+    await validateUniqueUsername(validData.username, {
+      transaction: options.transaction,
+    });
+  }
+
+  if ("email" in validData) {
+    await validateUniqueEmail(validData.email, {
+      transaction: options.transaction,
+    });
+  }
+
+  if ("password" in validData) {
+    await hashPasswordInObject(validData);
+  }
+
+  const newUser = { ...oldUser, ...validData };
+
+  const updatedUser = await runUpdateQuery(oldUser, newUser, {
+    transaction: options.transaction,
+  });
+
+  return updatedUser;
+}
+
+async function runUpdateQuery(oldUser, newUser, options) {
+  const query = {
+    text: `
+    UPDATE 
+      users 
+    SET 
+      username = $2, 
+      email = $3,
+      password = $4,
+      description = $5,
+      picture = $6,
+      updated_at = (now() at time zone 'utc')
+    WHERE
+      id = $1
+    RETURNING
+      *
+    ;`,
+    values: [
+      oldUser.id,
+      newUser.username,
+      newUser.email,
+      newUser.password,
+      newUser.description,
+      newUser.picture,
+    ],
+  };
+
+  const results = await db.query(query, options);
+  return results.rows[0];
+}
+
+async function validatePatchSchema(data) {
+  const cleanValues = validator(data, {
+    username: "optional",
+    email: "optional",
+    password: "optional",
+    description: "optional",
+    picture: "optional",
+  });
+
+  return cleanValues;
+}
+
 export default {
   create,
   findById,
   findByEmail,
-  findByUsername,
+  findByTag,
   createAnonymous,
   removeFeatures,
+  update,
+  addFeatures,
 };

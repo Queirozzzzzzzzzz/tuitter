@@ -89,11 +89,7 @@ describe("DELETE /api/v1/sessions", () => {
     });
 
     test(`Without "read:session" feature.`, async () => {
-      const defaultUser = await orchestrator.createUser({
-        tag: "validusertag2",
-        username: "Valid User Username 2",
-        email: "validuseremail2@email.com",
-      });
+      const defaultUser = await orchestrator.createUser();
       const sessionObj = await orchestrator.createSession(defaultUser);
       await orchestrator.removeFeaturesFromUser(defaultUser, ["read:session"]);
 

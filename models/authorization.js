@@ -1,5 +1,4 @@
 import { ForbiddenError, ValidationError } from "errors";
-import validator from "models/validator.js";
 
 const availableFeatures = new Set([
   // USER
@@ -14,6 +13,10 @@ const availableFeatures = new Set([
   // SESSION
   "create:session",
   "read:session",
+
+  // MODERATION
+  "update:user:others",
+  "ban:user",
 ]);
 
 function can(user, feature, resource) {
@@ -55,6 +58,30 @@ function filterInput(user, feature, input, target) {
     };
   }
 
+  if (feature === "update:user" && can(user, feature, target)) {
+    filteredInputValues = {
+      tag: input.tag,
+      username: input.username,
+      email: input.email,
+      password: input.password,
+      description: input.description,
+      picture: input.picture,
+    };
+  }
+
+  if (feature === "update:user:others" && can(user, feature)) {
+    filteredInputValues = {
+      description: input.description,
+      picture: input.picture,
+    };
+  }
+
+  if (feature === "ban:user" && can(user, feature)) {
+    filteredInputValues = {
+      ban_type: input.ban_type,
+    };
+  }
+
   return JSON.parse(JSON.stringify(filteredInputValues));
 }
 
@@ -73,6 +100,7 @@ function filterOutput(user, feature, output) {
         username: output.username,
         email: output.email,
         features: output.features,
+        description: output.description,
         created_at: output.created_at,
         updated_at: output.updated_at,
       };
@@ -108,6 +136,7 @@ function filterOutput(user, feature, output) {
       tag: output.tag,
       username: output.username,
       features: output.features,
+      description: output.description,
       created_at: output.created_at,
       updated_at: output.updated_at,
     };

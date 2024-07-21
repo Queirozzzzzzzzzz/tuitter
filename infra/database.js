@@ -30,17 +30,19 @@ const cache = {
   openedConnections: null,
 };
 
-async function query(query) {
+async function query(query, options = {}) {
   let client;
   cache.poolQueryCount += 1;
 
   try {
-    client = await tryToGetNewClientFromPool();
+    client = options.transaction
+      ? options.transaction
+      : await tryToGetNewClientFromPool();
     return await client.query(query);
   } catch (err) {
     throw parseQueryErrorAndLog(err, query);
   } finally {
-    if (client) {
+    if (client && !options.transaction) {
       const tooManyConnections = await checkForTooManyConnections(client);
       client.release(tooManyConnections && webserver.isServerlessRuntime);
     }
@@ -188,9 +190,14 @@ function parseQueryErrorAndLog(err, query) {
   return errorToReturn;
 }
 
+async function transaction() {
+  return await tryToGetNewClientFromPool();
+}
+
 export default {
   query,
   getNewClient,
+  transaction,
   errorCodes: {
     UNIQUE_CONSTRAINT_VIOLATION,
     SERIALIZATION_FAILURE,

@@ -1,5 +1,6 @@
 import retry from "async-retry";
 import setCookieParser from "set-cookie-parser";
+import { faker } from "@faker-js/faker";
 
 import db from "infra/database";
 import migrator from "infra/migrator.js";
@@ -70,12 +71,48 @@ async function runPendingMigrations() {
   await migrator.runPendingMigrations();
 }
 
+const usedFakeTagsOrUsernames = new Set();
+const usedFakeEmails = new Set();
+function getFakeTagOrUsername() {
+  let tagOrUsername;
+  while (!tagOrUsername) {
+    tagOrUsername = faker.internet
+      .userName()
+      .replace(/[_.-]/g, "")
+      .substring(0, 29);
+
+    if (usedFakeTagsOrUsernames.has(tagOrUsername)) {
+      tagOrUsername = undefined;
+    } else {
+      usedFakeTagsOrUsernames.add(tagOrUsername);
+    }
+  }
+
+  return tagOrUsername;
+}
+
+function getFakeEmail() {
+  let email;
+  while (!email) {
+    email = faker.internet.email();
+
+    if (usedFakeEmails.has(email)) {
+      email = undefined;
+    } else {
+      usedFakeEmails.add(email);
+    }
+  }
+
+  return email;
+}
+
 async function createUser(userObj) {
   const info = {
-    tag: userObj?.tag || "validusertag",
-    username: userObj?.username || "Valid User Username",
-    email: userObj?.email || "validuseremail@email.com",
+    tag: userObj?.tag || getFakeTagOrUsername(),
+    username: userObj?.username || getFakeTagOrUsername(),
+    email: userObj?.email || getFakeEmail(),
     password: userObj?.password || "validuserpassword",
+    description: userObj?.description || "",
   };
 
   return await user.create(info);
@@ -89,8 +126,12 @@ async function findSessionByToken(token) {
   return await session.findByToken(token);
 }
 
-async function removeFeaturesFromUser(userObj, features) {
-  return await user.removeFeatures(userObj.id, features);
+async function removeFeaturesFromUser(obj, features) {
+  return await user.removeFeatures(obj.id, features);
+}
+
+async function addFeaturesToUser(obj, features) {
+  return await user.addFeatures(obj.id, features);
 }
 
 function parseSetCookies(res) {
@@ -111,4 +152,5 @@ export default {
   parseSetCookies,
   findSessionByToken,
   removeFeaturesFromUser,
+  addFeaturesToUser,
 };

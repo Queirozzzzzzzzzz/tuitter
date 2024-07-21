@@ -47,7 +47,7 @@ const defaultSchema = Joi.object()
 export default function validator(obj, keys) {
   try {
     obj = JSON.parse(JSON.stringify(obj));
-  } catch (error) {
+  } catch (err) {
     throw new ValidationError({
       message: "Não foi possível interpretar o valor enviado.",
       action: "Verifique se o valor enviado é um JSON válido.",
@@ -69,7 +69,7 @@ export default function validator(obj, keys) {
     cachedSchemas[keysString] = finalSchema;
   }
 
-  const { error, value } = cachedSchemas[keysString].validate(obj, {
+  const { error: err, value } = cachedSchemas[keysString].validate(obj, {
     stripUnknown: true,
     context: {
       required: keys,
@@ -83,16 +83,14 @@ export default function validator(obj, keys) {
     },
   });
 
-  if (error) {
+  if (err) {
     throw new ValidationError({
-      message: error.details[0].message,
+      message: err.details[0].message,
       key:
-        error.details[0].context.key ||
-        error.details[0].context.type ||
-        "object",
+        err.details[0].context.key || err.details[0].context.type || "object",
       errorLocationCode: "MODEL:VALIDATOR:FINAL_SCHEMA",
       stack: new Error().stack,
-      type: error.details[0].type,
+      type: err.details[0].type,
     });
   }
 
@@ -177,6 +175,48 @@ const schemas = {
         .length(96)
         .alphanum()
         .when("$required.session_id", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
+    });
+  },
+
+  description: function () {
+    return Joi.object({
+      description: Joi.string()
+        .replace(
+          /(\s|\p{C}|\u2800|\u034f|\u115f|\u1160|\u17b4|\u17b5|\u3164|\uffa0)+$|\u0000/gsu,
+          "",
+        )
+        .max(160)
+        .allow("")
+        .when("$required.description", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
+    });
+  },
+
+  picture: function () {
+    return Joi.object({
+      picture: Joi.string()
+        .uri({ scheme: ["http", "https"] })
+        .when("$required.picture", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
+    });
+  },
+
+  ban_type: function () {
+    return Joi.object({
+      ban_type: Joi.string()
+        .trim()
+        .valid("nuke")
+        .when("$required.ban_type", {
           is: "required",
           then: Joi.required(),
           otherwise: Joi.optional(),
@@ -404,4 +444,5 @@ const reservedUsernames = [
   "va",
   "vagas",
   "videos",
+  "picture",
 ];

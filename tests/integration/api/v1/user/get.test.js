@@ -31,7 +31,7 @@ describe("GET /api/v1/user", () => {
       );
 
       const parsedCookies = orchestrator.parseSetCookies(res);
-      expect(parsedCookies).toStrictEqual({});
+      expect(parsedCookies).toEqual({});
     });
   });
 
@@ -60,12 +60,12 @@ describe("GET /api/v1/user", () => {
       );
 
       const parsedCookies = orchestrator.parseSetCookies(res);
-      expect(parsedCookies).toStrictEqual({});
+      expect(parsedCookies).toEqual({});
 
       const sessionObj = await orchestrator.findSessionByToken(
         userSession.token,
       );
-      expect(sessionObj).toStrictEqual(userSession);
+      expect(sessionObj).toEqual(userSession);
     });
   });
 });

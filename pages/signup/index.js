@@ -40,9 +40,6 @@ export default function signup() {
       router.push("/login");
       return;
     }
-
-    const resBody = await res.json();
-    console.log(resBody);
   }
 
   return (

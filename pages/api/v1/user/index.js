@@ -4,6 +4,7 @@ import session from "models/session";
 import authentication from "models/authentication";
 import controller from "models/controller";
 import authorization from "models/authorization";
+import db from "infra/database";
 
 export default nextConnect({
   attachParams: true,

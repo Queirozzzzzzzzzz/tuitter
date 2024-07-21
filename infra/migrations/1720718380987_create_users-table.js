@@ -36,6 +36,19 @@ exports.up = (pgm) => {
       default: `{}`,
     },
 
+    description: {
+      type: "varchar(160)",
+      notNull: true,
+      default: "",
+    },
+
+    picture: {
+      type: "varchar",
+      check: "length(picture) <= 2000",
+      notNull: false,
+      default: "",
+    },
+
     created_at: {
       type: "timestamp with time zone",
       notNull: true,
