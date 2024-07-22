@@ -1,20 +1,20 @@
 export async function getServerSideProps(context) {
   const { query } = context;
-  const { user_tag, post_id } = query;
+  const { user_tag, tuit_id } = query;
 
   return {
     props: {
       userTag: user_tag,
-      postId: post_id,
+      tuitId: tuit_id,
     },
   };
 }
 
-export default function post({ userTag, postId }) {
+export default function tuit({ userTag, tuitId }) {
   return (
     <>
       <p>User tag: {userTag}</p>
-      <p>Post id: {postId}</p>
+      <p>Tuit id: {tuitId}</p>
     </>
   );
 }

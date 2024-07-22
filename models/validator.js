@@ -182,6 +182,30 @@ const schemas = {
     });
   },
 
+  body: function () {
+    return Joi.object({
+      body: Joi.string()
+        .pattern(
+          /^(\s|\p{C}|\u2800|\u034f|\u115f|\u1160|\u17b4|\u17b5|\u3164|\uffa0).*$/su,
+          { invert: true },
+        )
+        .replace(
+          /(\s|\p{C}|\u2800|\u034f|\u115f|\u1160|\u17b4|\u17b5|\u3164|\uffa0)+$|\u0000/gsu,
+          "",
+        )
+        .min(1)
+        .max(255)
+        .when("$required.body", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        })
+        .messages({
+          "string.pattern.invert.base": `{#label} deve começar com caracteres visíveis.`,
+        }),
+    });
+  },
+
   description: function () {
     return Joi.object({
       description: Joi.string()
@@ -213,13 +237,49 @@ const schemas = {
 
   ban_type: function () {
     return Joi.object({
-      ban_type: Joi.string()
+      ban_type: Joi.string().trim().valid("nuke").when("$required.ban_type", {
+        is: "required",
+        then: Joi.required(),
+        otherwise: Joi.optional(),
+      }),
+    });
+  },
+
+  owner_id: function () {
+    return Joi.object({
+      owner_id: Joi.string()
         .trim()
-        .valid("nuke")
-        .when("$required.ban_type", {
+        .guid({ version: "uuidv4" })
+        .when("$required.owner_id", {
           is: "required",
           then: Joi.required(),
-          otherwise: Joi.optional(),
+          otherwise: Joi.optional().allow(null),
+        }),
+    });
+  },
+
+  parent_id: function () {
+    return Joi.object({
+      parent_id: Joi.string()
+        .trim()
+        .guid({ version: "uuidv4" })
+        .when("$required.parent_id", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional().allow(null),
+        }),
+    });
+  },
+
+  quote_id: function () {
+    return Joi.object({
+      quote_id: Joi.string()
+        .trim()
+        .guid({ version: "uuidv4" })
+        .when("$required.quote_id", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional().allow(null),
         }),
     });
   },
@@ -387,6 +447,9 @@ const reservedUsernames = [
   "perfil",
   "pesquisa",
   "popular",
+  "tuit",
+  "tuitar",
+  "tuits",
   "post",
   "postar",
   "posts",

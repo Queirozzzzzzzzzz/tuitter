@@ -50,8 +50,9 @@ describe("DELETE /api/v1/sessions", () => {
         },
       );
 
-      expect(validSessionRes.status).toBe(200);
       const validSessionResBody = await validSessionRes.json();
+
+      expect(validSessionRes.status).toBe(200);
       expect(validSessionResBody.id).toBe(defaultUser.id);
 
       // 2°: Delete the session

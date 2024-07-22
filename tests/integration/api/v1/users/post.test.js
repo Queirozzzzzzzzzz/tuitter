@@ -16,6 +16,10 @@ const defaultUserFeatures = [
   "read:user",
   "read:user:self",
   "update:user",
+  "read:tuit",
+  "read:tuit:list",
+  "update:tuit",
+  "create:tuit",
 ];
 
 describe("POST /api/v1/users", () => {

@@ -29,6 +29,10 @@ async function create(rawData) {
     "read:user",
     "read:user:self",
     "update:user",
+    "read:tuit",
+    "read:tuit:list",
+    "update:tuit",
+    "create:tuit",
   ];
 
   const query = {

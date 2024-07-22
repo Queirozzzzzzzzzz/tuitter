@@ -1,5 +1,5 @@
 exports.up = async (pgm) => {
-  await pgm.createTable("posts", {
+  await pgm.createTable("tuits", {
     id: {
       type: "uuid",
       default: pgm.func("gen_random_uuid()"),
@@ -23,7 +23,7 @@ exports.up = async (pgm) => {
       notNull: false,
     },
 
-    content: {
+    body: {
       type: "varchar(255)",
       notNull: true,
     },
@@ -35,9 +35,22 @@ exports.up = async (pgm) => {
       check: "status IN ('disabled', 'published')",
     },
 
-    published_at: {
-      type: "timestamp with time zone",
-      notNull: false,
+    likes: {
+      type: "integer",
+      notNull: true,
+      default: 0,
+    },
+
+    retuits: {
+      type: "integer",
+      notNull: true,
+      default: 0,
+    },
+
+    bookmarks: {
+      type: "integer",
+      notNull: true,
+      default: 0,
     },
 
     created_at: {
@@ -55,6 +68,5 @@ exports.up = async (pgm) => {
 };
 
 exports.down = async (pgm) => {
-  await pgm.dropConstraint("posts", "posts_uniqueness_fkey");
-  await pgm.dropTable("posts");
+  await pgm.dropTable("tuits");
 };

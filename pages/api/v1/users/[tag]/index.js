@@ -120,7 +120,7 @@ async function deleteValidationHandler(req, res, next) {
   next();
 }
 
-// TODO - After creating post and rating systems
+// TODO - After creating tuit and rating systems
 async function deleteHandler(req, res) {
   const reqUser = req.context.user;
   const targetUser = await user.findByTag(req.query.tag);
