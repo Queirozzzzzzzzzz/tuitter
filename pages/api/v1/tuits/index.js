@@ -14,9 +14,9 @@ export default nextConnect({
   onError: controller.onErrorHandler,
 })
   .use(controller.injectRequestMetadata)
+  .use(authentication.injectUser)
   .use(controller.logRequest)
   .post(
-    authentication.injectUser,
     postValidationHandler,
     authorization.canRequest("create:tuit"),
     postHandler,

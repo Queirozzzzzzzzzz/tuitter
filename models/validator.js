@@ -283,6 +283,19 @@ const schemas = {
         }),
     });
   },
+
+  tuit_id: function () {
+    return Joi.object({
+      tuit_id: Joi.string()
+        .trim()
+        .guid({ version: "uuidv4" })
+        .when("$required.tuit_id", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional().allow(null),
+        }),
+    });
+  },
 };
 
 function checkReservedTags(tag, helpers) {

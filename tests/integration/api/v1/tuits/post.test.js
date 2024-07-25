@@ -9,7 +9,7 @@ beforeAll(async () => {
   await orchestrator.runPendingMigrations();
 });
 
-describe("POST /api/v1/contents", () => {
+describe("POST /api/v1/tuits", () => {
   describe("Anonymous user", () => {
     test("Content with minimum valid data", async () => {
       const requestBuilder = new RequestBuilder("/api/v1/tuits");
@@ -93,6 +93,8 @@ describe("POST /api/v1/contents", () => {
         body: 'Campo "owner_id" da request deveria ser ignorado e pego através da sessão.',
         owner_id: secondUser.id,
       });
+
+      console.log(resBody);
 
       expect(res.status).toBe(201);
       expect(resBody.owner_id).toEqual(defaultUser.id);

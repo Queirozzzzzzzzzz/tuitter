@@ -7,6 +7,7 @@ import migrator from "infra/migrator.js";
 import user from "models/user";
 import session from "models/session";
 import webserver from "infra/webserver";
+import tuit from "models/tuit";
 
 if (process.env.NODE_ENV !== "test") {
   throw new Error({
@@ -142,6 +143,23 @@ function parseSetCookies(res) {
   return parsedCookies;
 }
 
+async function createTuit(options = {}) {
+  const info = {
+    body: options.body || "Body text.",
+  };
+
+  let defaultUser;
+  if (!options.userObj) {
+    defaultUser = await createUser();
+  } else {
+    defaultUser = options.userObj;
+  }
+
+  info.owner_id = defaultUser.id;
+
+  return await tuit.create(info);
+}
+
 export default {
   webserverUrl,
   waitForAllServices,
@@ -153,4 +171,5 @@ export default {
   findSessionByToken,
   removeFeaturesFromUser,
   addFeaturesToUser,
+  createTuit,
 };

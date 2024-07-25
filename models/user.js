@@ -162,7 +162,7 @@ async function findById(id) {
 
   if (results.rowCount === 0) {
     throw new NotFoundError({
-      message: `O id "${userId}" não foi encontrado no sistema.`,
+      message: `O id "${id}" não foi encontrado no sistema.`,
       action: 'Verifique se o "id" está digitado corretamente.',
       stack: new Error().stack,
       errorLocationCode: "MODEL:USER:FIND_BY_ID:NOT_FOUND",

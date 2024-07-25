@@ -18,6 +18,7 @@ const availableFeatures = new Set([
   "read:tuit",
   "read:tuit:list",
   "update:tuit",
+  "update:tuit:others",
   "create:tuit",
 
   // MODERATION
@@ -34,6 +35,12 @@ function can(user, feature, resource) {
   switch (feature) {
     case "update:user":
       return resource?.id && user.id === resource.id;
+
+    case "update:tuit":
+      return (
+        (resource?.id && user.id === resource.owner_id) ||
+        user.features.includes("update:tuit:others")
+      );
   }
 
   if (!resource) return true;
@@ -85,6 +92,12 @@ function filterInput(user, feature, input, target) {
   if (feature === "create:tuit" && can(user, feature)) {
     filteredInputValues = {
       body: input.body,
+    };
+  }
+
+  if (feature === "update:tuit" && can(user, feature, target)) {
+    filteredInputValues = {
+      tuit_id: input.tuit_id,
     };
   }
 
@@ -160,14 +173,20 @@ function filterOutput(user, feature, output) {
       owner_id: output.owner_id,
       parent_id: output.parent_id,
       quote_id: output.quote_id,
-      body: output.body,
       status: output.status,
-      likes: output.likes,
-      retuits: output.retuits,
-      bookmarks: output.bookmarks,
       created_at: output.created_at,
       updated_at: output.updated_at,
     };
+
+    if (!(output.status === "disabled")) {
+      filteredOutputValues = {
+        ...filteredOutputValues,
+        body: output.body,
+        likes: output.likes,
+        retuits: output.retuits,
+        bookmarks: output.bookmarks,
+      };
+    }
   }
 
   return JSON.parse(JSON.stringify(filteredOutputValues));

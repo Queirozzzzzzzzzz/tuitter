@@ -57,6 +57,57 @@ async function runInsertQuery(tuit, options) {
   return results.rows[0];
 }
 
+async function findById(id) {
+  const query = {
+    text: `
+    SELECT 
+      *
+    FROM 
+      tuits 
+    WHERE 
+      id = $1
+    ;`,
+    values: [id],
+  };
+
+  const results = await db.query(query);
+
+  if (results.rowCount === 0) {
+    throw new NotFoundError({
+      message: `O id "${id}" não foi encontrado no sistema.`,
+      action: 'Verifique se o "id" está digitado corretamente.',
+      stack: new Error().stack,
+      errorLocationCode: "MODEL:TUIT:FIND_BY_ID:NOT_FOUND",
+      key: "id",
+    });
+  }
+
+  return results.rows[0];
+}
+
+async function disable(id, options = {}) {
+  const query = {
+    text: `
+    UPDATE 
+      tuits 
+    SET 
+      status = 'disabled',
+      updated_at = (now() at time zone 'utc')
+    WHERE
+      id = $1
+    RETURNING
+      *
+    ;`,
+    values: [id],
+  };
+
+  const results = await db.query(query, options);
+
+  return results.rows[0];
+}
+
 export default {
   create,
+  findById,
+  disable,
 };
