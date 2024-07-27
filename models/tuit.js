@@ -106,8 +106,116 @@ async function disable(id, options = {}) {
   return results.rows[0];
 }
 
+async function checkActionExists(tableName, userId, tuitId, options = {}) {
+  const query = {
+    text: `SELECT * FROM ${tableName} WHERE owner_id = $1 AND tuit_id = $2;`,
+    values: [userId, tuitId],
+  };
+
+  return await db.query(query, options);
+}
+
+async function insertFeedbackTableQuery(
+  tableName,
+  isInserting,
+  userId,
+  tuitId,
+  options = {},
+) {
+  const queryText = `
+    ${isInserting ? "INSERT INTO" : "DELETE FROM"} 
+    ${tableName} ${isInserting ? "(owner_id, tuit_id) VALUES ($1, $2)" : "WHERE owner_id = $1 AND tuit_id = $2 "}
+    RETURNING 
+      *
+    ;`;
+  const query = { text: queryText, values: [userId, tuitId] };
+
+  return await db.query(query, options);
+}
+
+async function insertTuitFeedbackQuery(
+  isInserting,
+  tableName,
+  tuitId,
+  options = {},
+) {
+  const queryText = `
+    UPDATE 
+      tuits 
+    SET 
+      ${tableName} = (${tableName} ${isInserting ? "+" : "-"} 1),
+      updated_at = (now() at time zone 'utc') 
+    WHERE 
+      id = $1 
+    RETURNING 
+      *
+    ;`;
+  const query = { text: queryText, values: [tuitId] };
+  return await db.query(query, options);
+}
+
+async function performFeedbackAction(tableName, userId, tuitId, options = {}) {
+  const isActionExistsResults = await checkActionExists(
+    tableName,
+    userId,
+    tuitId,
+    options,
+  );
+  const isInserting = isActionExistsResults.rows.length === 0;
+
+  if (tableName === "views" && !isInserting) return null;
+
+  const results = await insertFeedbackTableQuery(
+    tableName,
+    isInserting,
+    userId,
+    tuitId,
+    options,
+  );
+
+  await insertTuitFeedbackQuery(isInserting, tableName, tuitId, options);
+
+  return results.rows[0];
+}
+
+async function view(userId, tuitId, options = {}) {
+  return performFeedbackAction("views", userId, tuitId, options);
+}
+
+async function like(userId, tuitId, options = {}) {
+  return performFeedbackAction("likes", userId, tuitId, options);
+}
+
+async function retuit(userId, tuitId, options = {}) {
+  return performFeedbackAction("retuits", userId, tuitId, options);
+}
+
+async function bookmark(userId, tuitId, options = {}) {
+  return performFeedbackAction("bookmarks", userId, tuitId, options);
+}
+
+async function comment(rawData, options = {}) {
+  const comment = await create(rawData, options);
+  await insertTuitFeedbackQuery(true, "comments", comment.parent_id, options);
+
+  return comment;
+}
+
+async function quote(rawData, options = {}) {
+  const quote = await create(rawData, options);
+  await insertTuitFeedbackQuery(true, "quotes", quote.quote_id, options);
+
+  return quote;
+}
+
 export default {
   create,
   findById,
   disable,
+  view,
+  like,
+  retuit,
+  bookmark,
+  comment,
+  quote,
 };

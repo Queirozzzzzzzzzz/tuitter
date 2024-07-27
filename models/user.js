@@ -23,6 +23,7 @@ async function create(rawData) {
   await validateUniqueEmail(validData.email);
   await hashPasswordInObject(validData);
 
+  // Default user features
   validData.features = [
     "read:session",
     "create:session",
@@ -33,6 +34,7 @@ async function create(rawData) {
     "read:tuit:list",
     "update:tuit",
     "create:tuit",
+    "create:tuit:feedback",
   ];
 
   const query = {
@@ -61,7 +63,7 @@ async function create(rawData) {
 
 function createAnonymous() {
   return {
-    features: ["create:session", "create:user"],
+    features: ["create:session", "create:user", "read:tuit"],
   };
 }
 

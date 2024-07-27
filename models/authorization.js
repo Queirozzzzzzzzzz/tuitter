@@ -20,6 +20,7 @@ const availableFeatures = new Set([
   "update:tuit",
   "update:tuit:others",
   "create:tuit",
+  "create:tuit:feedback",
 
   // MODERATION
   "update:user:others",

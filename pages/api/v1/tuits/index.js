@@ -16,11 +16,35 @@ export default nextConnect({
   .use(controller.injectRequestMetadata)
   .use(authentication.injectUser)
   .use(controller.logRequest)
+  .get(
+    getValidationHandler,
+    authorization.canRequest("read:tuit:list"),
+    getHandler,
+  )
   .post(
     postValidationHandler,
     authorization.canRequest("create:tuit"),
     postHandler,
   );
+
+async function getValidationHandler(req, res, next) {
+  const cleanValues = validator(
+    { ...req.query, ignore: "ignore" },
+    {
+      ignore: "ignore",
+      parent_id: "optional",
+    },
+  );
+
+  req.query = cleanValues;
+  delete req.query.ignore;
+
+  next();
+}
+
+async function getHandler(req, res) {
+  // TODO - Return list of 15 most relevant tuits from the last 50 tuits that were not viewed by user
+}
 
 async function postValidationHandler(req, res, next) {
   const cleanValues = validator(req.body, {

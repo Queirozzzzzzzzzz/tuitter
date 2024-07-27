@@ -10,6 +10,7 @@ beforeAll(async () => {
   await orchestrator.runPendingMigrations();
 });
 
+// Default user features
 const defaultUserFeatures = [
   "read:session",
   "create:session",
@@ -20,6 +21,7 @@ const defaultUserFeatures = [
   "read:tuit:list",
   "update:tuit",
   "create:tuit",
+  "create:tuit:feedback",
 ];
 
 describe("POST /api/v1/users", () => {

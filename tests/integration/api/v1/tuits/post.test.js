@@ -94,8 +94,6 @@ describe("POST /api/v1/tuits", () => {
         owner_id: secondUser.id,
       });
 
-      console.log(resBody);
-
       expect(res.status).toBe(201);
       expect(resBody.owner_id).toEqual(defaultUser.id);
       expect(resBody.parent_id).toBeNull();

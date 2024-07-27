@@ -119,20 +119,20 @@ async function createUser(userObj) {
   return await user.create(info);
 }
 
-async function createSession(userObj) {
-  return await session.create(userObj.id);
+async function createSession(sessionObj) {
+  return await session.create(sessionObj.id);
 }
 
 async function findSessionByToken(token) {
   return await session.findByToken(token);
 }
 
-async function removeFeaturesFromUser(obj, features) {
-  return await user.removeFeatures(obj.id, features);
+async function removeFeaturesFromUser(userObj, features) {
+  return await user.removeFeatures(userObj.id, features);
 }
 
-async function addFeaturesToUser(obj, features) {
-  return await user.addFeatures(obj.id, features);
+async function addFeaturesToUser(userObj, features) {
+  return await user.addFeatures(userObj.id, features);
 }
 
 function parseSetCookies(res) {
@@ -143,24 +143,154 @@ function parseSetCookies(res) {
   return parsedCookies;
 }
 
-async function createTuit(options = {}) {
-  const info = {
-    body: options.body || "Body text.",
-  };
-
-  let defaultUser;
-  if (!options.userObj) {
-    defaultUser = await createUser();
-  } else {
-    defaultUser = options.userObj;
-  }
-
-  info.owner_id = defaultUser.id;
+async function createTuit(values = {}) {
+  const info = await getTuitInfo(values);
 
   return await tuit.create(info);
 }
 
-export default {
+async function getTuitInfo(values = {}) {
+  const info = {
+    body: values.body || "Body text.",
+    parent_id: values.parent_id || undefined,
+    quote_id: values.quote_id || undefined,
+  };
+
+  let defaultUser;
+  if (!values.userObj) {
+    defaultUser = await createUser();
+  } else {
+    defaultUser = values.userObj;
+  }
+
+  info.owner_id = defaultUser.id;
+
+  return info;
+}
+
+async function runTransaction(queryFunction, ...args) {
+  const transaction = await db.transaction();
+  try {
+    await transaction.query("BEGIN");
+    const result = await queryFunction(...args, { transaction });
+    await transaction.query("COMMIT");
+    return result;
+  } catch (err) {
+    await transaction.query("ROLLBACK");
+    throw err;
+  } finally {
+    await transaction.release();
+  }
+}
+
+async function viewTuit(values = {}) {
+  const userObj = values.userObj ? values.userObj : await createUser();
+  return await runTransaction(tuit.view, userObj.id, values.tuitId);
+}
+
+async function likeTuit(values = {}) {
+  const userObj = values.userObj ? values.userObj : await createUser();
+  return await runTransaction(tuit.like, userObj.id, values.tuitId);
+}
+
+async function retuitTuit(values = {}) {
+  const userObj = values.userObj ? values.userObj : await createUser();
+  return await runTransaction(tuit.retuit, userObj.id, values.tuitId);
+}
+
+async function bookmarkTuit(values = {}) {
+  const userObj = values.userObj ? values.userObj : await createUser();
+  return await runTransaction(tuit.bookmark, userObj.id, values.tuitId);
+}
+
+async function commentTuit(values = {}) {
+  const info = await getTuitInfo(values);
+
+  return await tuit.comment(info);
+}
+
+async function quoteTuit(values = {}) {
+  const info = await getTuitInfo(values);
+
+  return await tuit.quote(info);
+}
+
+async function generateRandomTuitCommentQuote(i) {
+  const generatedTuit = await createTuit({
+    body: `${i} generated tuit.`,
+  });
+
+  await viewTuit({
+    tuitId: generatedTuit.id,
+  });
+  await likeTuit({
+    tuitId: generatedTuit.id,
+  });
+  await retuitTuit({
+    tuitId: generatedTuit.id,
+  });
+  await bookmarkTuit({
+    tuitId: generatedTuit.id,
+  });
+
+  await commentTuit({
+    parent_id: generatedTuit.id,
+    body: `${i} generated tuit comment.`,
+  });
+
+  await quoteTuit({
+    quote_id: generatedTuit.id,
+    body: `${i} generated tuit quote.`,
+  });
+}
+
+async function generateTuits(amount) {
+  for (let i = 0; i < amount; i++) {
+    await generateRandomTuitCommentQuote(i);
+  }
+}
+
+async function generateTuitCommentQuote(
+  body,
+  views,
+  likes,
+  retuits,
+  bookmarks,
+) {
+  const generatedTuit = await createTuit({
+    body: "First tuit",
+  });
+
+  async function performAction(actionName, count) {
+    await Promise.all(
+      Array.from({ length: count }, () =>
+        orchestrator[actionName]({ tuitId: generatedTuit.id }),
+      ),
+    );
+  }
+
+  await performAction("viewTuit", views);
+  await performAction("likeTuit", likes);
+  await performAction("retuitTuit", retuits);
+  await performAction("bookmarkTuit", bookmarks);
+
+  const generatedTuitComment = await commentTuit({
+    parent_id: generatedTuit.id,
+    body: `${body}, comment.`,
+  });
+  const generatedTuitQuote = await quoteTuit({
+    quote_id: generatedTuit.id,
+    body: `${body}, quote.`,
+  });
+
+  return {
+    generatedTuitId: generatedTuit.id,
+    generatedTuitCommentId: generatedTuitComment.id,
+    generatedTuitQuoteId: generatedTuitQuote.id,
+  };
+}
+
+const orchestrator = {
   webserverUrl,
   waitForAllServices,
   dropAllTables,
@@ -172,4 +302,14 @@ export default {
   removeFeaturesFromUser,
   addFeaturesToUser,
   createTuit,
+  viewTuit,
+  likeTuit,
+  retuitTuit,
+  bookmarkTuit,
+  commentTuit,
+  quoteTuit,
+  generateTuits,
+  generateTuitCommentQuote,
 };
+
+export default orchestrator;

@@ -38,6 +38,21 @@ export default class RequestBuilder {
     }
   }
 
+  async get(route = "") {
+    if (!this.headers) {
+      this.buildHeaders();
+    }
+
+    const res = await fetch(`${this.baseUrl}${route}`, {
+      method: "GET",
+      headers: this.headers,
+    });
+
+    const resBody = await res.json();
+
+    return { res, resBody };
+  }
+
   async post(routeOrRequestBody, inputRequestBody) {
     const { route, reqBody } = this.getRouteAndRequestBody(
       routeOrRequestBody,

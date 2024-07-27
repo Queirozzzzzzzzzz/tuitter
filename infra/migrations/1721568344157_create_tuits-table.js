@@ -35,6 +35,12 @@ exports.up = async (pgm) => {
       check: "status IN ('disabled', 'published')",
     },
 
+    views: {
+      type: "integer",
+      notNull: true,
+      default: 0,
+    },
+
     likes: {
       type: "integer",
       notNull: true,
@@ -48,6 +54,18 @@ exports.up = async (pgm) => {
     },
 
     bookmarks: {
+      type: "integer",
+      notNull: true,
+      default: 0,
+    },
+
+    comments: {
+      type: "integer",
+      notNull: true,
+      default: 0,
+    },
+
+    quotes: {
       type: "integer",
       notNull: true,
       default: 0,

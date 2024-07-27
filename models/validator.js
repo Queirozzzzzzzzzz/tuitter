@@ -266,8 +266,14 @@ const schemas = {
         .when("$required.parent_id", {
           is: "required",
           then: Joi.required(),
-          otherwise: Joi.optional().allow(null),
+          otherwise: Joi.optional(),
         }),
+    });
+  },
+
+  ignore: function () {
+    return Joi.object({
+      ignore: Joi.string().optional(),
     });
   },
 
@@ -293,6 +299,19 @@ const schemas = {
           is: "required",
           then: Joi.required(),
           otherwise: Joi.optional().allow(null),
+        }),
+    });
+  },
+
+  feedback_type: function () {
+    return Joi.object({
+      feedback_type: Joi.string()
+        .trim()
+        .valid("view", "like", "retuit", "bookmark")
+        .when("$required.order", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
         }),
     });
   },
