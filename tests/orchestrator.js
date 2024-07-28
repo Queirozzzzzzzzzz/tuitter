@@ -256,10 +256,14 @@ async function generateTuitCommentQuote(
   likes,
   retuits,
   bookmarks,
+  userObj,
 ) {
-  const generatedTuit = await createTuit({
-    body: "First tuit",
-  });
+  let tuitValues = { body: body ? body : "Tuit" };
+  if (userObj) {
+    tuitValues = { ...tuitValues, userObj };
+  }
+
+  const generatedTuit = await createTuit(tuitValues);
 
   async function performAction(actionName, count) {
     await Promise.all(
@@ -283,8 +287,10 @@ async function generateTuitCommentQuote(
     body: `${body}, quote.`,
   });
 
+  const updatedGeneratedTuit = await tuit.findById(generatedTuit.id);
+
   return {
-    generatedTuit,
+    updatedGeneratedTuit,
     generatedTuitComment,
     generatedTuitQuote,
   };

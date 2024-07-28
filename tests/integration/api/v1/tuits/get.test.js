@@ -41,37 +41,38 @@ describe("POST /api/v1/tuits", () => {
 
     test("Retrieving tuits and quotes", async () => {
       const requestBuilder = new RequestBuilder("/api/v1/tuits");
-      await requestBuilder.buildUser();
+      const defaultUser = await requestBuilder.buildUser();
 
       const thirdMostRelevantTuitCommentQuote =
         await orchestrator.generateTuitCommentQuote(
-          "2 views, 3 likes, 8 retuits, 12 bookmark",
-          2,
+          "13 views, 3 likes, 1 retuit, 0 bookmarks",
+          13,
           3,
-          8,
-          12,
+          1,
+          0,
         );
 
       await orchestrator.generateTuits(2);
 
       const firstMostRelevantTuitCommentQuote =
         await orchestrator.generateTuitCommentQuote(
-          "120 views, 5 likes, 4 retuits, 1 bookmark",
-          120,
-          15,
+          "25 views, 25 likes, 8 retuits, 4 bookmarks",
+          25,
+          25,
+          8,
           4,
-          1,
+          defaultUser,
         );
 
       await orchestrator.generateTuits(2);
 
       const secondMostRelevantTuitCommentQuote =
         await orchestrator.generateTuitCommentQuote(
-          "22 views, 3 likes, 8 retuits, 12 bookmark",
-          22,
-          5,
-          8,
-          12,
+          "70 views, 20 likes, 4 retuits, 4 bookmarks",
+          70,
+          20,
+          4,
+          4,
         );
 
       const tuitsInDatabase = await db.query("SELECT * FROM tuits;");
@@ -81,14 +82,33 @@ describe("POST /api/v1/tuits", () => {
 
       expect(res.status).toBe(200);
       expect(resBody.length).toBe(15);
-      expect(resBody[0].id).toBe(
-        firstMostRelevantTuitCommentQuote.generatedTuit.id,
-      );
+
+      const firstMostRelevantTuit =
+        firstMostRelevantTuitCommentQuote.updatedGeneratedTuit;
+
+      expect(resBody[0].id).toBe(firstMostRelevantTuit.id);
+      expect(resBody[0].relevance).toBe(18.4);
+      expect(resBody[0].owner_id).toEqual(firstMostRelevantTuit.owner_id);
+      expect(resBody[0].parent_id).toEqual(firstMostRelevantTuit.parent_id);
+      expect(resBody[0].quote_id).toEqual(firstMostRelevantTuit.quote_id);
+      expect(resBody[0].body).toEqual(firstMostRelevantTuit.body);
+      expect(resBody[0].status).toEqual(firstMostRelevantTuit.status);
+      expect(resBody[0].views).toBe(firstMostRelevantTuit.views);
+      expect(resBody[0].likes).toBe(firstMostRelevantTuit.likes);
+      expect(resBody[0].retuits).toBe(firstMostRelevantTuit.retuits);
+      expect(resBody[0].bookmarks).toBe(firstMostRelevantTuit.bookmarks);
+      expect(resBody[0].comments).toBe(firstMostRelevantTuit.comments);
+      expect(resBody[0].quotes).toBe(firstMostRelevantTuit.quotes);
+      expect(Date.parse(resBody[0].created_at)).not.toEqual(NaN);
+      expect(Date.parse(resBody[0].updated_at)).not.toEqual(NaN);
+      expect(resBody[0].owner_info.username).toBe(defaultUser.username);
+      expect(resBody[0].owner_info.picture).toBe(defaultUser.picture);
+
       expect(resBody[1].id).toBe(
-        secondMostRelevantTuitCommentQuote.generatedTuit.id,
+        secondMostRelevantTuitCommentQuote.updatedGeneratedTuit.id,
       );
       expect(resBody[2].id).toBe(
-        thirdMostRelevantTuitCommentQuote.generatedTuit.id,
+        thirdMostRelevantTuitCommentQuote.updatedGeneratedTuit.id,
       );
     });
   });

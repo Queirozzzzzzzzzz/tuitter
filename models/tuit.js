@@ -212,25 +212,49 @@ const amountOfRootTuits = 15;
 async function getRelevantTuits(userId, options = {}) {
   const query = {
     text: `
-    SELECT t.*
-    FROM tuits t
-    WHERE NOT EXISTS (
-      SELECT 1 FROM views v
-      WHERE v.owner_id = $1 AND v.tuit_id = t.id
-    )
-    LIMIT 30
-    ;`,
+      SELECT t.*, u.username, u.picture, 
+             q.body as quote_body, q_u.username as quote_owner_username, q_u.picture as quote_owner_picture
+      FROM tuits t
+      LEFT JOIN users u ON t.owner_id = u.id
+      LEFT JOIN tuits q ON t.quote_id = q.id
+      LEFT JOIN users q_u ON q.owner_id = q_u.id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM views v
+        WHERE v.owner_id = $1 AND v.tuit_id = t.id
+      )
+      LIMIT 30;
+    `,
     values: [userId],
   };
 
   const results = await db.query(query, options);
   const tuits = calcRelevance(results.rows, amountOfRootTuits);
 
+  for (const tuit of tuits) {
+    tuit.owner_info = {
+      username: tuit.username,
+      picture: tuit.picture,
+    };
+
+    delete tuit.quote_body;
+    delete tuit.quote_owner_username;
+    delete tuit.quote_owner_picture;
+
+    if (tuit.quote_id) {
+      tuit.quote_content = {
+        body: tuit.quote_body,
+        owner_info: {
+          username: tuit.quote_owner_username,
+          picture: tuit.quote_owner_picture,
+        },
+      };
+    }
+  }
+
   return tuits;
 }
 
 const relevanceWeights = {
-  views: 0.1,
   likes: 0.4,
   retuits: 0.7,
   bookmarks: 0.4,
@@ -240,8 +264,14 @@ const relevanceWeights = {
 
 function calcRelevance(tuits, amount) {
   const evaluatedTuits = tuits.map(({ id, ...rest }) => {
+    const viewsFactor =
+      (rest.views ? rest.views / 100 : 1) < 50
+        ? 1
+        : rest.views
+          ? rest.views / 100
+          : 1;
+
     const values = [
-      { value: rest.views, weight: relevanceWeights.views },
       { value: rest.likes, weight: relevanceWeights.likes },
       { value: rest.retuits, weight: relevanceWeights.retuits },
       { value: rest.bookmarks, weight: relevanceWeights.bookmarks },
@@ -250,7 +280,7 @@ function calcRelevance(tuits, amount) {
     ];
 
     const relevance = values.reduce(
-      (acc, { value, weight }) => acc + value * weight,
+      (acc, { value, weight }) => acc + (value / viewsFactor) * weight,
       0,
     );
 
@@ -274,9 +304,11 @@ async function getComments(parentId, tuitsIds = [], options = {}) {
 
   let queryText = `
     SELECT 
-      *
+      t.*, u.username, u.picture
     FROM 
-      tuits
+      tuits t
+    LEFT JOIN
+      users u ON t.owner_id = u.id
     WHERE 
       parent_id = $1
 `;
@@ -284,7 +316,7 @@ async function getComments(parentId, tuitsIds = [], options = {}) {
   let queryValues = [parentId];
 
   if (tuitsIds.length > 0) {
-    queryText += `AND id NOT IN (${tuitsIdsIndexes})`;
+    queryText += `AND t.id NOT IN (${tuitsIdsIndexes})`;
     queryValues = queryValues.concat(tuitsIds);
   }
 
@@ -294,6 +326,13 @@ async function getComments(parentId, tuitsIds = [], options = {}) {
 
   const results = await db.query(query, options);
   const tuits = calcRelevance(results.rows, amountOfCommentTuits);
+
+  for (const tuit of tuits) {
+    tuit.owner_info = {
+      username: tuit.username,
+      picture: tuit.picture,
+    };
+  }
 
   return tuits;
 }
