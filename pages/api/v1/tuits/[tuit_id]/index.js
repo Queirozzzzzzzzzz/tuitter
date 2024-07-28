@@ -16,11 +16,18 @@ export default nextConnect({
   .use(controller.injectRequestMetadata)
   .use(authentication.injectUser)
   .use(controller.logRequest)
+  .get(authorization.canRequest("read:tuit"), getHandler)
   .delete(
     deleteValidationHandler,
     authorization.canRequest("update:tuit"),
     deleteHandler,
   );
+
+async function getHandler(req, res) {
+  const info = await tuit.findById(req.query.tuit_id);
+
+  return res.status(200).json(info);
+}
 
 async function deleteValidationHandler(req, res, next) {
   const cleanQueryValues = validator(req.query, {
