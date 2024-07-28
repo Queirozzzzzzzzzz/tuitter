@@ -284,10 +284,19 @@ async function generateTuitCommentQuote(
   });
 
   return {
-    generatedTuitId: generatedTuit.id,
-    generatedTuitCommentId: generatedTuitComment.id,
-    generatedTuitQuoteId: generatedTuitQuote.id,
+    generatedTuit,
+    generatedTuitComment,
+    generatedTuitQuote,
   };
+}
+
+async function generateComments(tuitId, amount) {
+  for (let i = 0; i < amount; i++) {
+    await commentTuit({
+      parent_id: tuitId,
+      body: `${tuitId} comment.`,
+    });
+  }
 }
 
 const orchestrator = {
@@ -310,6 +319,7 @@ const orchestrator = {
   quoteTuit,
   generateTuits,
   generateTuitCommentQuote,
+  generateComments,
 };
 
 export default orchestrator;

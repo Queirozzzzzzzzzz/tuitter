@@ -43,7 +43,11 @@ async function getValidationHandler(req, res, next) {
 }
 
 async function getHandler(req, res) {
-  // TODO - Return list of 15 most relevant tuits from the last 50 tuits that were not viewed by user
+  const reqUser = req.context.user;
+
+  const tuits = await tuit.getRelevantTuits(reqUser.id);
+
+  return res.status(200).json(tuits);
 }
 
 async function postValidationHandler(req, res, next) {

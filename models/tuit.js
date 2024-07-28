@@ -208,6 +208,92 @@ async function quote(rawData, options = {}) {
   return quote;
 }
 
+const amountOfRootTuits = 15;
+async function getRelevantTuits(userId, options = {}) {
+  const query = {
+    text: `
+    SELECT t.*
+    FROM tuits t
+    WHERE NOT EXISTS (
+      SELECT 1 FROM views v
+      WHERE v.owner_id = $1 AND v.tuit_id = t.id
+    )
+    LIMIT 30
+    ;`,
+    values: [userId],
+  };
+
+  const results = await db.query(query, options);
+  const tuits = calcRelevance(results.rows, amountOfRootTuits);
+
+  return tuits;
+}
+
+const relevanceWeights = {
+  views: 0.1,
+  likes: 0.4,
+  retuits: 0.7,
+  bookmarks: 0.4,
+  comments: 0.5,
+  quotes: 0.7,
+};
+
+function calcRelevance(tuits, amount) {
+  const evaluatedTuits = tuits.map(({ id, ...rest }) => {
+    const values = [
+      { value: rest.views, weight: relevanceWeights.views },
+      { value: rest.likes, weight: relevanceWeights.likes },
+      { value: rest.retuits, weight: relevanceWeights.retuits },
+      { value: rest.bookmarks, weight: relevanceWeights.bookmarks },
+      { value: rest.comments, weight: relevanceWeights.comments },
+      { value: rest.quotes, weight: relevanceWeights.quotes },
+    ];
+
+    const relevance = values.reduce(
+      (acc, { value, weight }) => acc + value * weight,
+      0,
+    );
+
+    return { id, relevance };
+  });
+
+  const sortedEvaluatedTuits = evaluatedTuits.sort(
+    (a, b) => b.relevance - a.relevance,
+  );
+
+  return sortedEvaluatedTuits
+    .slice(0, amount)
+    .map((tuit) => ({ ...tuit, ...tuits.find((t) => t.id === tuit.id) }));
+}
+
+const amountOfCommentTuits = 10;
+async function getComments(parentId, tuitsIds = [], options = {}) {
+  tuitsIds = tuitsIds.length > 0 ? tuitsIds : [];
+
+  const query = {
+    text: `
+    SELECT 
+      *
+    FROM 
+      tuits
+    WHERE 
+      parent_id = $1
+    AND 
+      id
+    NOT IN
+      ($2)
+    LIMIT 
+      50
+    ;`,
+    values: [parentId, ...tuitsIds],
+  };
+
+  const results = await db.query(query, options);
+  const tuits = calcRelevance(results.rows, amountOfCommentTuits);
+
+  return tuits;
+}
+
 export default {
   create,
   findById,
@@ -218,4 +304,6 @@ export default {
   bookmark,
   comment,
   quote,
+  getRelevantTuits,
+  getComments,
 };
