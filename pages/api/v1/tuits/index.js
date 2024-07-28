@@ -16,31 +16,12 @@ export default nextConnect({
   .use(controller.injectRequestMetadata)
   .use(authentication.injectUser)
   .use(controller.logRequest)
-  .get(
-    getValidationHandler,
-    authorization.canRequest("read:tuit:list"),
-    getHandler,
-  )
+  .get(authorization.canRequest("read:tuit:list"), getHandler)
   .post(
     postValidationHandler,
     authorization.canRequest("create:tuit"),
     postHandler,
   );
-
-async function getValidationHandler(req, res, next) {
-  const cleanValues = validator(
-    { ...req.query, ignore: "ignore" },
-    {
-      ignore: "ignore",
-      parent_id: "optional",
-    },
-  );
-
-  req.query = cleanValues;
-  delete req.query.ignore;
-
-  next();
-}
 
 async function getHandler(req, res) {
   const reqUser = req.context.user;

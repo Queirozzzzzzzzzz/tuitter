@@ -268,25 +268,29 @@ function calcRelevance(tuits, amount) {
 
 const amountOfCommentTuits = 10;
 async function getComments(parentId, tuitsIds = [], options = {}) {
-  tuitsIds = tuitsIds.length > 0 ? tuitsIds : [];
+  const tuitsIdsIndexes = tuitsIds
+    .map((_, index) => `$${index + 2}`)
+    .join(", ");
 
-  const query = {
-    text: `
+  let queryText = `
     SELECT 
       *
     FROM 
       tuits
     WHERE 
       parent_id = $1
-    AND 
-      id
-    NOT IN
-      ($2)
-    LIMIT 
-      50
-    ;`,
-    values: [parentId, ...tuitsIds],
-  };
+`;
+
+  let queryValues = [parentId];
+
+  if (tuitsIds.length > 0) {
+    queryText += `AND id NOT IN (${tuitsIdsIndexes})`;
+    queryValues = queryValues.concat(tuitsIds);
+  }
+
+  queryText += " LIMIT 50;";
+
+  const query = { text: queryText, values: queryValues };
 
   const results = await db.query(query, options);
   const tuits = calcRelevance(results.rows, amountOfCommentTuits);

@@ -266,14 +266,8 @@ const schemas = {
         .when("$required.parent_id", {
           is: "required",
           then: Joi.required(),
-          otherwise: Joi.optional(),
+          otherwise: Joi.optional().allow(null),
         }),
-    });
-  },
-
-  ignore: function () {
-    return Joi.object({
-      ignore: Joi.string().optional(),
     });
   },
 
@@ -309,6 +303,18 @@ const schemas = {
         .trim()
         .valid("view", "like", "retuit", "bookmark")
         .when("$required.order", {
+          is: "required",
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
+    });
+  },
+
+  comments_ids: function () {
+    return Joi.object({
+      comments_ids: Joi.array()
+        .items(Joi.string().guid({ version: "uuidv4" }))
+        .when("$required.comments_ids", {
           is: "required",
           then: Joi.required(),
           otherwise: Joi.optional(),
